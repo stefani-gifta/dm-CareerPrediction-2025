@@ -1,7 +1,3 @@
-# ----------------------------
-# AI-POWERED Resume + TechWolf Pipeline
-# Uses Claude API for intelligent resume parsing
-# ----------------------------
 library(dplyr)
 library(tidyr)
 library(stringr)
@@ -12,20 +8,14 @@ library(docxtractr)
 library(httr)
 library(jsonlite)
 
-# ----------------------------
-# CONFIGURATION
-# ----------------------------
-ANTHROPIC_API_KEY <- Sys.getenv("ANTHROPIC_API_KEY")  # Set this in your .Renviron file
-USE_AI_EXTRACTION <- TRUE  # Set to FALSE to use pattern-matching only
+ANTHROPIC_API_KEY <- Sys.getenv("ANTHROPIC_API_KEY")
+USE_AI_EXTRACTION <- TRUE
 
 if (USE_AI_EXTRACTION && ANTHROPIC_API_KEY == "") {
   warning("ANTHROPIC_API_KEY not found. Set it with: Sys.setenv(ANTHROPIC_API_KEY='your-key-here')")
   USE_AI_EXTRACTION <- FALSE
 }
 
-# ----------------------------
-# COMPREHENSIVE SKILL LIST
-# ----------------------------
 skill_list <- c(
   # Programming Languages
   "java", "python", "javascript", "typescript", "c\\+\\+", "c#", "scala", "groovy", 
@@ -110,9 +100,7 @@ skill_list <- c(
   "olap", "oltp", "soap ui", "mule esb", "apache cxf", "jersey"
 )
 
-# ----------------------------
-# SKILL EXTRACTION FUNCTION
-# ----------------------------
+# Skill extraction function
 extract_skills <- function(text) {
   text_lower <- tolower(text)
   found <- skill_list[str_detect(text_lower, skill_list)]
@@ -130,9 +118,7 @@ extract_skills <- function(text) {
   )
 }
 
-# ----------------------------
-# SENIORITY CALCULATION FUNCTION
-# ----------------------------
+# seniority calcualtion
 calculate_seniority <- function(text) {
   year_nums <- str_extract_all(text, "\\b(19|20)\\d{2}\\b")[[1]]
   
@@ -157,18 +143,14 @@ calculate_seniority <- function(text) {
   list(total_years = total_years, seniority_level = seniority_level)
 }
 
-# ----------------------------
-# AI EXTRACTION FUNCTION
-# ----------------------------
 library(httr)
 library(jsonlite)
 
 check_available_models <- function() {
-  api_key <- Sys.getenv("ANTHROPIC_API_KEY") # Ensure this is set!
+  api_key <- Sys.getenv("ANTHROPIC_API_KEY")
   
   if (api_key == "") stop("ANTHROPIC_API_KEY is missing from environment.")
   
-  # We check the standard 'models' endpoint
   url <- paste0("https://generativelanguage.googleapis.com/v1beta/models?key=", api_key)
   
   resp <- httr::GET(url)
@@ -182,8 +164,6 @@ check_available_models <- function() {
   data <- content(resp, "parsed")
   models <- data$models
   
-  # Print nicely
-  cat("\n=== AVAILABLE MODELS FOR YOUR KEY ===\n")
   for (m in models) {
     # Filter for 'generateContent' capable models
     if ("generateContent" %in% m$supportedGenerationMethods) {
@@ -203,8 +183,6 @@ extract_resume_with_ai <- function(resume_text, person_id) {
     return(list(education = list(), jobs = list(), name = NA, success = FALSE))
   }
   
-  # 1. SIMPLIFIED PROMPT: We don't need to beg for JSON format as much
-  # because the API setting will enforce it.
   prompt_text <- paste0(
     "You are a resume parser. Extract structured information from this resume text.\n",
     "Dates must be YYYY-MM-DD. If a specific day is missing, use YYYY-MM-01.\n\n",
@@ -219,10 +197,8 @@ extract_resume_with_ai <- function(resume_text, person_id) {
     "}"
   )
   
-  # 2. CORRECT URL: Use the stable model tag
   url <- "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
   
-  # 3. NATIVE JSON MODE: The 'generationConfig' is the secret sauce
   body <- list(
     contents = list(
       list(parts = list(list(text = prompt_text)))
@@ -233,7 +209,6 @@ extract_resume_with_ai <- function(resume_text, person_id) {
     )
   )
   
-  # 4. EXECUTE REQUEST
   resp <- tryCatch({
     httr::POST(
       url = paste0(url, "?key=", api_key),
@@ -254,7 +229,7 @@ extract_resume_with_ai <- function(resume_text, person_id) {
   out <- httr::content(resp, "parsed")
   raw_text <- out$candidates[[1]]$content$parts[[1]]$text
   
-  # Remove markdown backticks if present (e.g. ```json ... ```)
+  # remove markdown backticks if present (e.g. ```json ... ```)
   clean_json <- str_replace_all(raw_text, "```json|```", "")
   
   parsed <- tryCatch({
@@ -272,9 +247,7 @@ extract_resume_with_ai <- function(resume_text, person_id) {
   parsed
 }
 
-# ----------------------------
-# FALLBACK: Pattern-based extraction
-# ----------------------------
+# pattern-based extraction
 extract_education_patterns <- function(text) {
   if (is.na(text) || text == "") return(tibble())
   
@@ -324,17 +297,12 @@ extract_job_patterns <- function(text) {
   )
 }
 
-# ----------------------------
-# 1) Read .docx resumes
-# ----------------------------
 resume_dir <- "Resumes"
 docx_files <- list.files(resume_dir, pattern = "\\.docx$", full.names = TRUE)
 
 if (length(docx_files) == 0) {
   stop("No .docx files found in Resumes/ directory!")
 }
-
-# install.packages("readtext")
 
 library(readtext)
 
@@ -359,15 +327,9 @@ df_resumes <- tibble(
     person_id = paste0("R_", row_number())
   )
 
-cat("\n=== RESUME EXTRACTION ===\n")
-cat("✓ Loaded", nrow(df_resumes), "resume files\n")
+cat(nrow(df_resumes), "resume files\n")
 
 df_resumes[1, 'raw_text']
-
-# ----------------------------
-# 2) Extract with AI (with progress)
-# ----------------------------
-cat("\n=== AI EXTRACTION (this may take a minute) ===\n")
 
 if (USE_AI_EXTRACTION && nrow(df_resumes) > 0) {
   
@@ -385,31 +347,26 @@ if (USE_AI_EXTRACTION && nrow(df_resumes) > 0) {
       )
     )
   
-  # ---- extract name ----
   df_results <- df_results %>%
     mutate(name = map_chr(ai_result, ~ .x$name %||% NA_character_))
   
-  # ---- extract education ----
   education_df <- df_results %>%
     mutate(education = map(ai_result, ~ .x$education %||% list())) %>%
     select(person_id, education) %>%
     unnest_longer(education, keep_empty = TRUE) %>%
     unnest_wider(education, names_sep = "_")
   
-  # ---- extract jobs ----
   jobs_df <- df_results %>%
     mutate(jobs = map(ai_result, ~ .x$jobs %||% list())) %>%
     select(person_id, jobs) %>%
     unnest_longer(jobs, keep_empty = TRUE) %>%
     unnest_wider(jobs, names_sep = "_")
   
-  cat("✓ AI extracted", nrow(education_df), "education records\n")
-  cat("✓ AI extracted", nrow(jobs_df), "job records\n")
+  cat(nrow(education_df), "education records\n")
+  cat(nrow(jobs_df), "job records\n")
   
 } else {
-  # Fallback to pattern matching
-  cat("Using pattern-based extraction (no API key provided)\n")
-  
+  # Fallback to pattern matching  
   EDUCATION_resumes <- df_resumes %>%
     select(person_id, raw_text) %>%
     mutate(edu = map(raw_text, extract_education_patterns)) %>%
@@ -426,11 +383,6 @@ if (USE_AI_EXTRACTION && nrow(df_resumes) > 0) {
     mutate(name = str_extract(raw_text, "(?m)^[A-Z][A-Za-z '\\-]{2,40}"))
 }
 
-# ----------------------------
-# 3) CALCULATE SENIORITY
-# ----------------------------
-cat("\n=== CALCULATING SENIORITY ===\n")
-
 df_seniority <- df_results %>%
   select(person_id, raw_text) %>%
   mutate(
@@ -442,11 +394,6 @@ df_seniority <- df_results %>%
 
 cat("✓ Calculated seniority for", nrow(df_seniority), "people\n")
 
-# ----------------------------
-# 4) EXTRACT SKILLS
-# ----------------------------
-cat("\n=== EXTRACTING SKILLS ===\n")
-
 df_skills <- df_results %>%
   select(person_id, raw_text) %>%
   mutate(
@@ -456,45 +403,28 @@ df_skills <- df_results %>%
   ) %>%
   select(person_id, skills_detected, skill_count)
 
-cat("✓ Extracted skills for", nrow(df_skills), "people\n")
-cat("✓ Average skills per person:", round(mean(df_skills$skill_count, na.rm = TRUE), 1), "\n")
+cat("Extracted skills for", nrow(df_skills), "people\n")
+cat("Average skills per person:", round(mean(df_skills$skill_count, na.rm = TRUE), 1), "\n")
 
-# ----------------------------
-# 5) REMOVE TECHWOLF SECTION
-# ----------------------------
-cat("\n=== TECHWOLF DISABLED ===\n")
 df_tw <- tibble()
 JOB_tw <- tibble()
 EDUCATION_tw <- tibble()
 PERSON_tw <- tibble()
 
-# ----------------------------
-# 6) Create unified tables (RESUME-ONLY)
-# ----------------------------
-
-# PERSON table — with seniority and skills
 PERSON <- df_results %>%
   select(person_id, name) %>%
   left_join(df_seniority, by = "person_id") %>%
   left_join(df_skills, by = "person_id")
 
-# EDUCATION table — only resume education
 EDUCATION <- education_df
 
-# JOB table — only resume jobs
 JOB <- jobs_df
 
-# ----------------------------
-# 7) Create analysis dataset
-# ----------------------------
+# analysis dataset
 FINAL_DATASET <- PERSON %>%
   left_join(EDUCATION, by="person_id", relationship = "many-to-many") %>%
   left_join(JOB, by="person_id", relationship = "many-to-many")
 
-# ----------------------------
-# 8) Summary & Export
-# ----------------------------
-cat("\n=== FINAL SUMMARY (RESUME-ONLY) = ==\n")
 cat("Total people:", nrow(PERSON), "\n")
 cat("Total education records:", nrow(EDUCATION), "\n")
 cat("Total job records:", nrow(JOB), "\n")
@@ -518,9 +448,10 @@ FINAL_DATASET <- FINAL_DATASET %>%
   select(-education_graduation_year)
 write.csv(FINAL_DATASET, "FINAL_dataset.csv", row.names = FALSE)
 
-cat("\n✓ All files saved successfully!\n")
+cat("\nAll files saved successfully!\n")
 cat("\nFiles created:\n")
 cat("  - PERSON_table.csv (includes: name, total_years, seniority_level, skills_detected, skill_count)\n")
 cat("  - EDUCATION_table.csv\n")
 cat("  - JOB_table.csv\n")
+
 cat("  - FINAL_dataset.csv (includes all fields with skills and seniority)\n")
