@@ -6,11 +6,16 @@ This study proposes an automated resume screening system to address the challeng
 
 Data extraction was done to parse skills, experience, education, and project information from approximately 4,000 resumes using TF-IDF. The core of the approach is a multi-label classification model that allows a single candidate to be recommended for multiple positions. Seven models were evaluated, including classical machine learning algorithms (Logistic Regression, SVM, Naive Bayes, Random Forest, and LightGBM) and transformer-based deep learning models (DistilBERT and BERT Base Multilingual).
 
+## Tech Stack
+
+- **Pipeline**: R and Python
+- **Data Format**: JSON (for raw resume data)
+
 ## Key Results
 
-  * **Top Performance:** LightGBM achieved the highest performance across all evaluation metrics, recording a micro-F1 score of 0.995.
-  * **Benefit:** The proposed system is expected to significantly reduce manual screening time by approximately 25–40%.
-  * **Future Direction:** While LightGBM performed best on the current dataset, transformer-based models (DistilBERT and BERT Base Multilingual) are considered more promising for future works involving larger and more linguistically diverse resume datasets.
+- **Top Performance:** LightGBM achieved the highest performance across all evaluation metrics, recording a micro-F1 score of 0.995.
+- **Benefit:** The proposed system is expected to significantly reduce manual screening time by approximately 25–40%.
+- **Future Direction:** While LightGBM performed best on the current dataset, transformer-based models (DistilBERT and BERT Base Multilingual) are considered more promising for future works involving larger and more linguistically diverse resume datasets.
 
 ## Resources
 
