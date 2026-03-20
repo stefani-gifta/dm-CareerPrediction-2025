@@ -4,9 +4,7 @@ This study proposes an automated resume screening system to address the challeng
 
 ## Methodology
 
-Data extraction was done to parse skills, experience, education, and project information from approximately 4,000 resumes using TF-IDF.
-
-The core of the approach is a multi-label classification model that allows a single candidate to be recommended for multiple positions. Seven models were evaluated, including classical machine learning algorithms (Logistic Regression, SVM, Naive Bayes, Random Forest, and LightGBM) and transformer-based deep learning models (DistilBERT and BERT Base Multilingual).
+Data extraction was done to parse skills, experience, education, and project information from approximately 4,000 resumes using TF-IDF. The core of the approach is a multi-label classification model that allows a single candidate to be recommended for multiple positions. Seven models were evaluated, including classical machine learning algorithms (Logistic Regression, SVM, Naive Bayes, Random Forest, and LightGBM) and transformer-based deep learning models (DistilBERT and BERT Base Multilingual).
 
 ## Key Results
 
